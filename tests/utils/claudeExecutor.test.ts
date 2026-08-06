@@ -23,7 +23,7 @@ describe('claudeExecutor', () => {
         '--model', 'claude-sonnet-4-6',
         'explain this code',
       ],
-      undefined
+      expect.objectContaining({ env: expect.any(Object) })
     );
   });
 
@@ -58,7 +58,7 @@ describe('claudeExecutor', () => {
     expect(executeCommand).toHaveBeenCalledWith(
       'claude',
       expect.any(Array),
-      { onProgress }
+      expect.objectContaining({ onProgress, env: expect.any(Object) })
     );
   });
 });

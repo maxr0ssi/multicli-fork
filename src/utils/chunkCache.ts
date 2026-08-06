@@ -14,6 +14,16 @@ const CACHE_DIR = path.join(os.tmpdir(), 'multicli-chunks');
 const CACHE_TTL = 10 * 60 * 1000;
 const MAX_CACHE_FILES = 50;
 
+// Cache keys are always the first 8 hex chars of a sha256 (see cacheChunks).
+// Anything else is rejected: the key is interpolated into a file path that is
+// read and, on parse failure, unlinked, so an unvalidated key is an arbitrary
+// file deletion primitive via `../` traversal.
+const CACHE_KEY_PATTERN = /^[0-9a-f]{8}$/;
+
+function isValidCacheKey(cacheKey: string): boolean {
+  return typeof cacheKey === 'string' && CACHE_KEY_PATTERN.test(cacheKey);
+}
+
 function ensureCacheDir(): void {
   if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -57,6 +67,10 @@ export function cacheChunks(prompt: string, chunks: EditChunk[]): string {
  * @returns The cached chunks or null if expired/not found
  */
 export function getChunks(cacheKey: string): EditChunk[] | null {
+  if (!isValidCacheKey(cacheKey)) {
+    return null;
+  }
+
   const filePath = path.join(CACHE_DIR, `${cacheKey}.json`);
 
   try {

@@ -144,24 +144,37 @@ describe('chunkCache', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(cacheData));
 
-      getChunks('expired2');
+      getChunks('e12ed002');
       expect(fs.unlinkSync).toHaveBeenCalledWith(
-        path.join(FAKE_CACHE_DIR, 'expired2.json')
+        path.join(FAKE_CACHE_DIR, 'e12ed002.json')
       );
     });
 
     it('returns null for nonexistent key', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const result = getChunks('noexist1');
+      const result = getChunks('a0e51571');
       expect(result).toBeNull();
+    });
+
+    it('rejects traversal keys without touching the filesystem', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('not valid json {{{');
+
+      // An unvalidated key is joined into a path, read, fails to parse, and is
+      // then unlinked: an arbitrary file deletion primitive.
+      const result = getChunks('../../../../private/tmp/victim');
+
+      expect(result).toBeNull();
+      expect(fs.readFileSync).not.toHaveBeenCalled();
+      expect(fs.unlinkSync).not.toHaveBeenCalled();
     });
 
     it('handles corrupted JSON gracefully and cleans up', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('not valid json {{{');
 
-      const result = getChunks('corrupt1');
+      const result = getChunks('c0ffee11');
       expect(result).toBeNull();
       // Should try to clean up the corrupted file
       expect(fs.unlinkSync).toHaveBeenCalled();

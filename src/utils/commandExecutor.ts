@@ -148,6 +148,9 @@ export async function executeCommand(
   command: string,
   args: string[],
   options: ToolExecutionContext = {},
+  // Codex prints its `session id: <uuid>` banner to stderr, so a caller that
+  // needs the id has to watch the stream rather than the returned stdout.
+  onStderrChunk?: (chunk: string) => void,
 ): Promise<string> {
   const {
     onProgress,
@@ -346,6 +349,7 @@ export async function executeCommand(
       const chunk = data.toString();
       stderr += chunk;
       stderrChunkCount += 1;
+      onStderrChunk?.(chunk);
       const loggedChunk = redactSensitiveText(chunk);
       logger?.debug("command_stderr_chunk", {
         command,

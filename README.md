@@ -1,3 +1,10 @@
+> **This is a private fork.** It carries security fixes, persistent
+> conversations, a delegation depth ceiling, and an `orchestrate` command that
+> upstream does not have, and it is run from disk rather than via `npx`.
+> Read [FORK.md](FORK.md) before merging upstream changes: several of those
+> changes are load bearing. The rest of this README is upstream's and describes
+> the base tool.
+
 # Multi-CLI MCP
 
 [![npm version](https://img.shields.io/npm/v/@osanoai/multicli)](https://www.npmjs.com/package/@osanoai/multicli)

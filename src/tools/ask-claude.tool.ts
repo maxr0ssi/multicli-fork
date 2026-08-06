@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UnifiedTool } from './registry.js';
 import { executeClaudeCLI } from '../utils/claudeExecutor.js';
+import { runConversationalTurn } from '../utils/conversationTurn.js';
 import { ERROR_MESSAGES, STATUS_MESSAGES } from '../constants.js';
 
 const askClaudeArgsSchema = z.object({
@@ -9,6 +10,7 @@ const askClaudeArgsSchema = z.object({
   permissionMode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'dontAsk', 'plan']).optional().describe("Optional. Do NOT set unless explicitly needed. Permission mode: 'default' (requires approval), 'acceptEdits' (auto-accepts file edits), 'bypassPermissions' (skips all checks — use with care), 'dontAsk', or 'plan'."),
   maxBudgetUsd: z.number().positive().optional().describe("Optional. Do NOT set unless explicitly needed. Maximum dollar amount to spend on API calls for this request."),
   systemPrompt: z.string().optional().describe("Optional. Do NOT set unless explicitly needed. Override or append a system prompt for this request."),
+  conversationId: z.string().optional().describe("Optional. Omit for a one-shot question with no memory of earlier calls. Pass \"new\" to start a persistent conversation: the reply ends with a conversation handle. Pass that handle back on later calls and Claude continues the same conversation, remembering everything said in it. A conversation is pinned to the model and directory it was opened with."),
 });
 
 export const askClaudeTool: UnifiedTool = {
@@ -22,21 +24,34 @@ export const askClaudeTool: UnifiedTool = {
   execution: { taskSupport: 'optional' },
   timeoutClass: 'ask',
   execute: async (args, context) => {
-    const { prompt, model, permissionMode, maxBudgetUsd, systemPrompt } = args;
+    const { prompt, model, permissionMode, maxBudgetUsd, systemPrompt, conversationId } = args;
 
     if (!prompt?.trim()) {
       throw new Error(ERROR_MESSAGES.NO_PROMPT_PROVIDED);
     }
 
-    const result = await executeClaudeCLI(
-      prompt as string,
-      model as string,
-      permissionMode as string | undefined,
-      maxBudgetUsd as number | undefined,
-      systemPrompt as string | undefined,
-      context
-    );
+    const text = await runConversationalTurn({
+      cli: 'claude',
+      conversationId: conversationId as string | undefined,
+      model: model as string,
+      // Claude Code enforces its own permissions and denies writes by default,
+      // so there is no sandbox to pin here.
+      sandbox: 'n/a',
+      cwd: context?.cwd ?? process.cwd(),
+      // Claude accepts --session-id, so the id is minted rather than scraped.
+      presetSessionId: true,
+      run: ({ startSessionId, resumeSessionId }) => executeClaudeCLI(
+        prompt as string,
+        model as string,
+        permissionMode as string | undefined,
+        maxBudgetUsd as number | undefined,
+        systemPrompt as string | undefined,
+        context,
+        startSessionId,
+        resumeSessionId,
+      ),
+    });
 
-    return `${STATUS_MESSAGES.CLAUDE_RESPONSE}\n${result}`;
+    return `${STATUS_MESSAGES.CLAUDE_RESPONSE}\n${text}`;
   }
 };

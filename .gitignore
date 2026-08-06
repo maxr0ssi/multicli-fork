@@ -41,3 +41,5 @@ logs/
 .gemini
 .codex
 tasks/
+# Orchestrator run artifacts (may contain working notes from a run)
+multicli-runs/

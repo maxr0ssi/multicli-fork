@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "multicli": "dist/index.js"
+    "multicli": "dist/index.js",
+    "orchestrate": "dist/orchestratorCli.js"
   },
   "scripts": {
     "build": "tsc && cp -f src/modelCatalog.generated.json dist/ 2>/dev/null || true",
@@ -15,9 +16,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "echo '⚠️  Remember to test locally first!' && npm run build",
+    "prepublishOnly": "echo '\u26a0\ufe0f  Remember to test locally first!' && npm run build",
     "refresh-catalog": "npx tsx scripts/refresh-catalog.ts",
-    "prepare": "husky || true"
+    "orchestrate": "node dist/orchestratorCli.js"
   },
   "keywords": [
     "mcp",
