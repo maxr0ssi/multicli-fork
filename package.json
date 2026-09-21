@@ -58,7 +58,7 @@
     "@vitest/coverage-v8": "^4.1.5",
     "husky": "^9.1.7",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
+    "vitest": "^5.0.1"
   },
   "overrides": {
     "@hono/node-server": "^1.19.14",
