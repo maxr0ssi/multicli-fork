@@ -1,0 +1,25 @@
+@layer components {
+  .run-telemetry { display: grid; width: min(100%, 72rem); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin-inline: auto; }
+  .telemetry-section { overflow: hidden; border: 0.0625rem solid var(--border-default); border-radius: var(--radius-large); background: var(--surface-panel); }
+  .telemetry-section > header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border-bottom: 0.0625rem solid var(--border-default); }
+  .telemetry-section > header h3, .telemetry-section > header p { margin: 0; }
+  .telemetry-section > header p { font-size: var(--font-small); }
+  .telemetry-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+  .telemetry-values > div { display: grid; gap: var(--space-1); padding: var(--space-4); }
+  .telemetry-values > div + div { border-left: 0.0625rem solid var(--border-default); }
+  .telemetry-values dt, .telemetry-values small { color: var(--text-secondary); font-size: var(--font-small); }
+  .telemetry-values dd { font-size: 1.5rem; font-weight: 750; }
+  .telemetry-breakdown { padding: 0 var(--space-4) var(--space-4); }
+  .telemetry-breakdown h4 { margin-bottom: var(--space-2); color: var(--text-secondary); font-size: var(--font-small); }
+  .telemetry-breakdown dl { display: grid; gap: var(--space-2); margin: 0; }
+  .telemetry-breakdown dl > div { display: flex; justify-content: space-between; gap: var(--space-3); }
+  .telemetry-breakdown dt, .telemetry-breakdown dd { font-size: var(--font-small); }
+  .telemetry-breakdown dt { color: var(--text-secondary); }
+  .telemetry-cost { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); padding: var(--space-4); border-top: 0.0625rem solid var(--border-default); }
+  .telemetry-cost span, .telemetry-cost small { color: var(--text-secondary); }
+  .telemetry-cost small { grid-column: 1 / -1; }
+
+  @media (max-width: 50rem) {
+    .run-telemetry { grid-template-columns: 1fr; }
+  }
+}

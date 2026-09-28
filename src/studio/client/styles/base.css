@@ -1,0 +1,24 @@
+@layer base {
+  html { background: var(--surface-canvas); }
+  body {
+    min-height: 100vh;
+    background: var(--surface-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--font-body);
+    line-height: var(--line-body);
+  }
+  a { color: inherit; }
+  button, input, select, textarea {
+    color: var(--text-primary);
+  }
+  :focus-visible {
+    outline: 0.1875rem solid var(--focus-ring);
+    outline-offset: 0.125rem;
+  }
+  h1 { margin-bottom: var(--space-3); font-size: var(--font-title); line-height: 1.15; letter-spacing: -0.025em; }
+  h2 { margin-bottom: var(--space-2); font-size: 1.125rem; line-height: 1.25; }
+  h3 { margin-bottom: var(--space-2); font-size: 0.9375rem; }
+  p { color: var(--text-secondary); }
+  pre { font-family: var(--font-mono); }
+}

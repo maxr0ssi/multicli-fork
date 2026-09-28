@@ -1,0 +1,97 @@
+// Tool Registry Index - Registers tools based on CLI availability
+import { toolRegistry } from './registry.js';
+import { askAntigravityTool } from './ask-antigravity.tool.js';
+import { askGeminiTool } from './ask-gemini.tool.js';
+import {
+  antigravityHelpTool, geminiHelpTool, codexHelpTool, claudeHelpTool, opencodeHelpTool,
+  antigravityListModelsTool, geminiListModelsTool, codexListModelsTool, claudeListModelsTool, opencodeListModelsTool,
+} from './simple-tools.js';
+import { fetchAntigravityChunkTool, fetchChunkTool } from './fetch-chunk.tool.js';
+import { askCodexTool } from './ask-codex.tool.js';
+import { askClaudeTool } from './ask-claude.tool.js';
+import { askOpencodeTool } from './ask-opencode.tool.js';
+import { detectAvailableClis, CliAvailability } from '../utils/cliDetector.js';
+import { MultiCliConfig } from '../config.js';
+import type { Logger } from '../logger.js';
+import {
+  getWorkflowRunTool,
+  listWorkflowRunsTool,
+  startLunaBuildCouncilTool,
+} from './workflow-studio.tool.js';
+import { createWorkflowDraftTools } from './workflow-draft.tool.js';
+
+/**
+ * Initialize the tool registry based on which CLIs are available.
+ * Must be called (and awaited) before the server starts accepting requests.
+ */
+export async function initTools(
+  config?: Pick<MultiCliConfig, 'cliDetectTimeoutMs'> & { logger?: Logger },
+): Promise<CliAvailability> {
+  toolRegistry.length = 0;
+  const availability = await detectAvailableClis(
+    config?.cliDetectTimeoutMs,
+    config?.logger,
+  );
+  const draftTools = createWorkflowDraftTools({
+    runtimeCapabilities: { cliAvailability: availability },
+  });
+
+  if (availability.antigravity) {
+    toolRegistry.push(
+      antigravityListModelsTool, // List-Antigravity-Models
+      askAntigravityTool,        // Ask-Antigravity
+      fetchAntigravityChunkTool, // Fetch-Antigravity-Chunk
+      antigravityHelpTool,       // Antigravity-Help
+    );
+  }
+
+  if (availability.gemini) {
+    toolRegistry.push(
+      geminiListModelsTool,      // List-Gemini-Models
+      askGeminiTool,             // Ask-Gemini
+      fetchChunkTool,            // Fetch-Chunk
+      geminiHelpTool,            // Gemini-Help
+    );
+  }
+
+  if (availability.codex) {
+    toolRegistry.push(
+      codexListModelsTool,    // List-Codex-Models
+      askCodexTool,           // Ask-Codex
+      codexHelpTool,          // Codex-Help
+      startLunaBuildCouncilTool,
+    );
+  }
+
+  toolRegistry.push(
+    draftTools.describeWorkflowDesignTool,
+    draftTools.createWorkflowDraftTool,
+    listWorkflowRunsTool,
+    getWorkflowRunTool,
+  );
+
+  if (availability.claude) {
+    toolRegistry.push(
+      claudeListModelsTool,   // List-Claude-Models
+      askClaudeTool,          // Ask-Claude
+      claudeHelpTool,         // Claude-Help
+    );
+  }
+
+  if (availability.opencode) {
+    toolRegistry.push(
+      opencodeListModelsTool, // List-OpenCode-Models
+      askOpencodeTool,        // Ask-OpenCode
+      opencodeHelpTool,       // OpenCode-Help
+    );
+  }
+
+  config?.logger?.info('tool_registry_initialized', {
+    availability,
+    toolNames: toolRegistry.map((tool) => tool.name),
+  });
+
+  return availability;
+}
+
+export * from './registry.js';

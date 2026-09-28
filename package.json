@@ -1,0 +1,103 @@
+{
+  "name": "@maxr0ssi/multicli",
+  "version": "1.5.41",
+  "description": "Experimental MCP bridge for Claude Code and Codex",
+  "type": "module",
+  "main": "dist/publicApi.js",
+  "types": "dist/publicApi.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/publicApi.d.ts",
+      "import": "./dist/publicApi.js"
+    },
+    "./workflows": {
+      "types": "./dist/workflows/index.d.ts",
+      "import": "./dist/workflows/index.js"
+    },
+    "./harness": {
+      "types": "./dist/harness/index.d.ts",
+      "import": "./dist/harness/index.js"
+    },
+    "./control-plane": {
+      "types": "./dist/controlPlane/index.d.ts",
+      "import": "./dist/controlPlane/index.js"
+    },
+    "./persistence": {
+      "types": "./dist/persistence/index.d.ts",
+      "import": "./dist/persistence/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "multicli": "dist/index.js",
+    "orchestrate": "dist/orchestratorCli.js"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc && node scripts/build-studio.mjs && node -e \"require('node:fs').copyFileSync('src/modelCatalog.generated.json', 'dist/modelCatalog.generated.json')\"",
+    "start": "node dist/index.js",
+    "dev": "npm run build && node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "refresh-catalog": "npx tsx scripts/refresh-catalog.ts",
+    "orchestrate": "node dist/orchestratorCli.js",
+    "harness": "node dist/index.js harness run",
+    "try:claude": "npm run build && node examples/claude-deep-task.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "antigravity",
+    "gemini",
+    "codex",
+    "claude",
+    "cli",
+    "coding",
+    "agent",
+    "llm"
+  ],
+  "author": "maxr0ssi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxr0ssi/multicli-fork.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maxr0ssi/multicli-fork/issues"
+  },
+  "homepage": "https://github.com/maxr0ssi/multicli-fork#readme",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "files": [
+    "dist/",
+    "examples/",
+    "README.md",
+    "docs/",
+    "NOTICE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.3.1",
+    "preact": "^10.29.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@vitest/coverage-v8": "^4.1.11",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.5",
+    "hono": "^4.12.14",
+    "path-to-regexp": "^8.4.2",
+    "picomatch": "^4.0.4"
+  },
+  "private": true,
+  "contributors": [
+    "arlogilbert"
+  ]
+}

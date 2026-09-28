@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+npm run build
+exec node dist/index.js harness run --trigger pre-push

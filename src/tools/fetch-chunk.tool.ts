@@ -1,0 +1,74 @@
+import { z } from 'zod';
+import { UnifiedTool } from './registry.js';
+import { getChunks } from '../utils/chunkCache.js';
+import { formatChangeModeResponse, summarizeChangeModeEdits } from '../utils/changeModeTranslator.js';
+
+const inputSchema = z.object({
+  cacheKey: z.string().describe("The cache key provided in the initial changeMode response"),
+  chunkIndex: z.number().min(1).describe("Which chunk to retrieve (1-based index)")
+});
+
+function createFetchChunkTool(name: string, category: 'antigravity' | 'gemini', deprecated = false): UnifiedTool {
+  return {
+  name,
+  description: deprecated
+    ? 'Deprecated compatibility alias for Fetch-Antigravity-Chunk. Retrieves cached chunks from an Antigravity changeMode response.'
+    : 'Retrieves cached chunks from an Antigravity changeMode response. Use this to get subsequent chunks after receiving a partial changeMode response.',
+
+  zodSchema: inputSchema,
+
+  prompt: {
+    description: deprecated ? 'Deprecated alias: fetch the next Antigravity response chunk' : 'Fetch the next chunk of an Antigravity response',
+    arguments: [
+      {
+        name: 'cacheKey',
+        description: 'The cache key provided in the initial changeMode response',
+        required: true
+      },
+      {
+        name: 'chunkIndex',
+        description: 'Which chunk to retrieve (1-based index)',
+        required: true
+      }
+    ]
+  },
+
+  category,
+
+  execute: async (args: any): Promise<string> => {
+    const { cacheKey, chunkIndex } = args;
+    
+    // Retrieve cached chunks
+    const chunks = getChunks(cacheKey);
+    
+    if (!chunks) {
+      return `No cached chunks found for "${cacheKey}". The key may be invalid or the cache expired (10-minute TTL). Re-run the original changeMode request to regenerate the chunks.`;
+    }
+    
+    // Validate chunk index
+    if (chunkIndex < 1 || chunkIndex > chunks.length) {
+      return `Invalid chunk index: ${chunkIndex}. Available chunks: 1 to ${chunks.length}.`;
+    }
+    
+    // Get the requested chunk
+    const chunk = chunks[chunkIndex - 1];
+    
+    // Format the response
+    let result = formatChangeModeResponse(
+      chunk.edits,
+      { current: chunkIndex, total: chunks.length, cacheKey }
+    );
+    
+    // Add summary for first chunk
+    if (chunkIndex === 1 && chunks.length > 1) {
+      const allEdits = chunks.flatMap(c => c.edits);
+      result = summarizeChangeModeEdits(allEdits, true) + '\n\n' + result;
+    }
+    
+    return result;
+  },
+};
+}
+
+export const fetchAntigravityChunkTool: UnifiedTool = createFetchChunkTool('Fetch-Antigravity-Chunk', 'antigravity');
+export const fetchChunkTool: UnifiedTool = createFetchChunkTool('Fetch-Chunk', 'gemini', true);

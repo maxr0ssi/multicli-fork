@@ -1,0 +1,135 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../../src/utils/cliDetector.js', () => ({
+  detectAvailableClis: vi.fn(),
+}));
+
+import { initTools } from '../../src/tools/index.js';
+import { toolRegistry } from '../../src/tools/registry.js';
+import { detectAvailableClis } from '../../src/utils/cliDetector.js';
+
+describe('initTools', () => {
+  let savedRegistry: typeof toolRegistry extends (infer T)[] ? T[] : never;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    savedRegistry = [...toolRegistry];
+    toolRegistry.length = 0;
+  });
+
+  afterEach(() => {
+    toolRegistry.length = 0;
+    toolRegistry.push(...savedRegistry);
+  });
+
+  it('registers antigravity tools and deprecated gemini aliases when agy is available', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: true, gemini: true, codex: false, claude: false, opencode: false,
+    });
+
+    await initTools();
+
+    const names = toolRegistry.map(t => t.name);
+    expect(names).toContain('List-Antigravity-Models');
+    expect(names).toContain('Ask-Antigravity');
+    expect(names).toContain('Fetch-Antigravity-Chunk');
+    expect(names).toContain('Antigravity-Help');
+    expect(names).toContain('List-Gemini-Models');
+    expect(names).toContain('Ask-Gemini');
+    expect(names).toContain('Fetch-Chunk');
+    expect(names).toContain('Gemini-Help');
+    // Should NOT have codex or claude tools
+    expect(names).not.toContain('Ask-Codex');
+    expect(names).not.toContain('Ask-Claude');
+    expect(names).not.toContain('Ask-OpenCode');
+  });
+
+  it('registers codex tools when codex available', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: false, gemini: false, codex: true, claude: false, opencode: false,
+    });
+
+    await initTools();
+
+    const names = toolRegistry.map(t => t.name);
+    expect(names).toContain('List-Codex-Models');
+    expect(names).toContain('Ask-Codex');
+    expect(names).toContain('Codex-Help');
+    expect(names).toContain('Start-Luna-Build-Council');
+    expect(names).not.toContain('Ask-Gemini');
+    expect(names).not.toContain('Ask-Antigravity');
+    expect(names).not.toContain('Ask-Claude');
+    expect(names).not.toContain('Ask-OpenCode');
+  });
+
+  it('registers claude tools when claude available', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: false, gemini: false, codex: false, claude: true, opencode: false,
+    });
+
+    await initTools();
+
+    const names = toolRegistry.map(t => t.name);
+    expect(names).toContain('List-Claude-Models');
+    expect(names).toContain('Ask-Claude');
+    expect(names).toContain('Claude-Help');
+    expect(names).not.toContain('Ask-Gemini');
+    expect(names).not.toContain('Ask-Antigravity');
+    expect(names).not.toContain('Ask-Codex');
+    expect(names).not.toContain('Ask-OpenCode');
+  });
+
+  it('registers opencode tools when opencode available', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: false, gemini: false, codex: false, claude: false, opencode: true,
+    });
+
+    await initTools();
+
+    const names = toolRegistry.map(t => t.name);
+    expect(names).toContain('List-OpenCode-Models');
+    expect(names).toContain('Ask-OpenCode');
+    expect(names).toContain('OpenCode-Help');
+    expect(names).not.toContain('Ask-Gemini');
+    expect(names).not.toContain('Ask-Antigravity');
+    expect(names).not.toContain('Ask-Codex');
+    expect(names).not.toContain('Ask-Claude');
+  });
+
+  it('registers tools for multiple available CLIs', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: true, gemini: true, codex: true, claude: false, opencode: false,
+    });
+
+    await initTools();
+
+    const names = toolRegistry.map(t => t.name);
+    expect(names).toContain('Ask-Antigravity');
+    expect(names).toContain('Ask-Gemini');
+    expect(names).toContain('Ask-Codex');
+    expect(names).not.toContain('Ask-Claude');
+    expect(names).not.toContain('Ask-OpenCode');
+  });
+
+  it('keeps durable run inspection available when no provider CLIs are installed', async () => {
+    vi.mocked(detectAvailableClis).mockResolvedValue({
+      antigravity: false, gemini: false, codex: false, claude: false, opencode: false,
+    });
+
+    await initTools();
+    expect(toolRegistry.map(tool => tool.name)).toEqual([
+      'Describe-Workflow-Design',
+      'Create-Workflow-Draft',
+      'List-Workflow-Runs',
+      'Get-Workflow-Run',
+    ]);
+  });
+
+  it('returns availability object', async () => {
+    const expected = { antigravity: true, gemini: true, codex: false, claude: true, opencode: false };
+    vi.mocked(detectAvailableClis).mockResolvedValue(expected);
+
+    const result = await initTools();
+    expect(result).toEqual(expected);
+  });
+});

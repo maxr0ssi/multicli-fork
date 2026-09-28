@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "multicli-self-hosting",
+  "description": "Repository-owned deterministic gate used by Claude, Codex, Git, CI, and Studio.",
+  "requiredChecks": [
+    "repo.loc.blocker",
+    "repo.types",
+    "repo.build",
+    "repo.tests"
+  ],
+  "advisoryChecks": [
+    "repo.loc.warning"
+  ],
+  "commands": [
+    { "executable": "npm", "argv": ["run", "lint"] },
+    { "executable": "npm", "argv": ["run", "build"] },
+    { "executable": "npm", "argv": ["test"] }
+  ],
+  "invariants": {
+    "defaultBuilder": "gpt-5.6-luna@max",
+    "defaultConductor": "gpt-5.6-sol@high",
+    "terraSelection": "explicit-only",
+    "providerAccess": "subscription-cli-sessions",
+    "directProviderApiKeys": false,
+    "sourceLines": {
+      "scope": ["src/**/*.{ts,tsx,mts,cts}", "scripts/**/*.{ts,tsx,mts,cts}", "tests/**/*.{ts,tsx,mts,cts}"],
+      "warnAt": 400,
+      "blockAt": 600
+    }
+  }
+}
