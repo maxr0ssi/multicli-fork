@@ -513,13 +513,13 @@ describe('getModelSets', () => {
 
   it('treats same models in different order as identical', () => {
     const catsA = {
-      gemini: { cli: 'gemini', tiers: [
-        { tier: 'fast' as const, models: ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] },
+      codex: { cli: 'codex', tiers: [
+        { tier: 'fast' as const, models: ['gpt-5', 'gpt-5-mini'] },
       ]},
     };
     const catsB = {
-      gemini: { cli: 'gemini', tiers: [
-        { tier: 'fast' as const, models: ['gemini-2.5-flash-lite', 'gemini-2.5-flash'] },
+      codex: { cli: 'codex', tiers: [
+        { tier: 'fast' as const, models: ['gpt-5-mini', 'gpt-5'] },
       ]},
     };
     expect(JSON.stringify(getModelSets(catsA)))
@@ -529,10 +529,10 @@ describe('getModelSets', () => {
   it('is independent of CLI key insertion order', () => {
     const catsA = {
       claude: { cli: 'claude', tiers: [{ tier: 'fast' as const, models: ['a'] }] },
-      gemini: { cli: 'gemini', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
+      codex: { cli: 'codex', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
     };
     const catsB = {
-      gemini: { cli: 'gemini', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
+      codex: { cli: 'codex', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
       claude: { cli: 'claude', tiers: [{ tier: 'fast' as const, models: ['a'] }] },
     };
     expect(JSON.stringify(getModelSets(catsA)))
@@ -579,7 +579,7 @@ describe('getModelSets', () => {
     };
     const updated = {
       claude: { cli: 'claude', tiers: [{ tier: 'fast' as const, models: ['a'] }] },
-      gemini: { cli: 'gemini', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
+      codex: { cli: 'codex', tiers: [{ tier: 'fast' as const, models: ['b'] }] },
     };
     expect(JSON.stringify(getModelSets(old)))
       .not.toBe(JSON.stringify(getModelSets(updated)));

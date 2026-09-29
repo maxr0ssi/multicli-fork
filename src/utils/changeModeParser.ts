@@ -7,12 +7,12 @@ export interface ChangeModeEdit {
   newEndLine: number;
   newCode: string;
 }
-export function parseChangeModeOutput(geminiResponse: string): ChangeModeEdit[] {
+export function parseChangeModeOutput(response: string): ChangeModeEdit[] {
   const edits: ChangeModeEdit[] = [];
   const markdownPattern = /\*\*FILE:\s*(.+?):(\d+)\*\*\s*\n```\s*\nOLD:\s*\n([\s\S]*?)\nNEW:\s*\n([\s\S]*?)\n```/g;
 
   let match;
-  while ((match = markdownPattern.exec(geminiResponse)) !== null) {
+  while ((match = markdownPattern.exec(response)) !== null) {
     const [_fullMatch, filename, startLineStr, oldCodeRaw, newCodeRaw] = match;
 
     const oldCode = oldCodeRaw.trimEnd();
@@ -41,7 +41,7 @@ export function parseChangeModeOutput(geminiResponse: string): ChangeModeEdit[] 
   if (edits.length === 0) {
     const editPattern = /\/old\/ \* (.+?) 'start:' (\d+)\n([\s\S]*?)\n\/\/ 'end:' (\d+)\s*\n\s*\\new\\ \* (.+?) 'start:' (\d+)\n([\s\S]*?)\n\/\/ 'end:' (\d+)/g;
 
-    while ((match = editPattern.exec(geminiResponse)) !== null) {
+    while ((match = editPattern.exec(response)) !== null) {
       const [
         _fullMatch,
         oldFilename,

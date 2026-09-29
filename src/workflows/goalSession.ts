@@ -92,6 +92,8 @@ export class PersistentGoalSession {
 export class GoalSessionService {
   readonly #turnLeaseMs: number;
   readonly #tails = new Map<string, Promise<void>>();
+  readonly #shutdown = new AbortController();
+  #closing?: Promise<void>;
 
   constructor(private readonly options: GoalSessionServiceOptions) {
     this.#turnLeaseMs = options.turnLeaseMs ?? DEFAULT_TURN_LEASE_MS;
@@ -101,6 +103,7 @@ export class GoalSessionService {
   }
 
   openGoalSession(input: OpenGoalSessionInput): PersistentGoalSession {
+    this.#assertOpen();
     const goal = nonEmpty(input.goal, 'Goal');
     const profile = normalizedGoalProfile(input.profile);
     let runSequence: number | undefined;
@@ -170,16 +173,19 @@ export class GoalSessionService {
   }
 
   get(id: string): PersistentGoalSession | undefined {
+    this.#assertOpen();
     return this.options.store.getGoalSession(id)
       ? new PersistentGoalSession(id, this)
       : undefined;
   }
 
   list(runId?: string, limit?: number): GoalSessionRecord[] {
+    this.#assertOpen();
     return this.options.store.listGoalSessions(runId, limit);
   }
 
   inspect(id: string): GoalSessionInspection {
+    this.#assertOpen();
     const session = this.options.store.getGoalSession(id);
     if (!session) throw new Error(`Unknown goal session: ${id}`);
     return {
@@ -193,8 +199,15 @@ export class GoalSessionService {
     instruction: string,
     options: { signal?: AbortSignal } = {},
   ): Promise<GoalSessionTurnResult> {
+    this.#assertOpen();
     const normalized = nonEmpty(instruction, 'Goal session instruction');
-    return this.#serialize(id, () => this.#executeTurn(id, normalized, options.signal));
+    const signal = options.signal
+      ? AbortSignal.any([this.#shutdown.signal, options.signal])
+      : this.#shutdown.signal;
+    return this.#serialize(id, () => {
+      signal.throwIfAborted();
+      return this.#executeTurn(id, normalized, signal);
+    });
   }
 
   close(id: string): Promise<GoalSessionRecord> {
@@ -207,6 +220,17 @@ export class GoalSessionService {
       if (closed.runId) this.#notifyRunEvents(closed.runId, sequence);
       return closed;
     });
+  }
+
+  shutdown(reason = 'Goal session service shutting down'): Promise<void> {
+    if (this.#closing) return this.#closing;
+    this.#shutdown.abort(new Error(reason));
+    this.#closing = Promise.allSettled([...this.#tails.values()]).then(() => undefined);
+    return this.#closing;
+  }
+
+  #assertOpen(): void {
+    if (this.#shutdown.signal.aborted) throw new Error('GoalSessionService is closed.');
   }
 
   async #executeTurn(
@@ -376,6 +400,7 @@ export class GoalSessionService {
   }
 
   async #serialize<T>(id: string, operation: () => Promise<T>): Promise<T> {
+    this.#assertOpen();
     const previous = this.#tails.get(id) ?? Promise.resolve();
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
@@ -383,6 +408,7 @@ export class GoalSessionService {
     this.#tails.set(id, tail);
     await previous;
     try {
+      this.#assertOpen();
       return await operation();
     } finally {
       release();

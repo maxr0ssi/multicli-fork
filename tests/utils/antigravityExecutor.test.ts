@@ -23,17 +23,17 @@ vi.mock('../../src/utils/chunkCache.js', () => ({
   getChunks: vi.fn(),
 }));
 
-import { executeGeminiCLI } from '../../src/utils/geminiExecutor.js';
+import { executeAntigravityCLI } from '../../src/utils/antigravityExecutor.js';
 import { formatAgyPrintTimeout } from '../../src/utils/antigravityExecutor.js';
 import { executeCommand } from '../../src/utils/commandExecutor.js';
 
-describe('geminiExecutor compatibility alias', () => {
+describe('antigravityExecutor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('builds correct base args with model and prompt', async () => {
-    await executeGeminiCLI('explain this code', 'gemini-3.1-pro-preview');
+    await executeAntigravityCLI('explain this code', 'gemini-3.1-pro-preview');
 
     expect(executeCommand).toHaveBeenCalledWith(
       'agy',
@@ -43,14 +43,14 @@ describe('geminiExecutor compatibility alias', () => {
   });
 
   it('passes multi-word prompts without executor-level quoting', async () => {
-    await executeGeminiCLI('Respond with a brief greeting confirming connectivity', 'gemini-3.1-pro-preview');
+    await executeAntigravityCLI('Respond with a brief greeting confirming connectivity', 'gemini-3.1-pro-preview');
 
     const args = vi.mocked(executeCommand).mock.calls[0][1];
     expect(args.at(-1)).toBe('Respond with a brief greeting confirming connectivity');
   });
 
   it('passes multiline and @ prompts without executor-level quoting', async () => {
-    await executeGeminiCLI('@src/index.ts explain this file\nthen summarize it', 'gemini-3.1-pro-preview');
+    await executeAntigravityCLI('@src/index.ts explain this file\nthen summarize it', 'gemini-3.1-pro-preview');
 
     const args = vi.mocked(executeCommand).mock.calls[0][1];
     expect(args.at(-1)).toBe('@src/index.ts explain this file\nthen summarize it');
@@ -58,14 +58,14 @@ describe('geminiExecutor compatibility alias', () => {
   });
 
   it('adds sandbox flag when enabled', async () => {
-    await executeGeminiCLI('task', 'gemini-3.1-pro-preview', true);
+    await executeAntigravityCLI('task', 'gemini-3.1-pro-preview', true);
 
     const args = vi.mocked(executeCommand).mock.calls[0][1];
     expect(args).toContain('--sandbox');
   });
 
   it('converts timeoutMs to agy print timeout seconds', async () => {
-    await executeGeminiCLI('task', 'gemini-3.1-pro-preview', false, false, { timeoutMs: 65_001 });
+    await executeAntigravityCLI('task', 'gemini-3.1-pro-preview', false, false, { timeoutMs: 65_001 });
 
     expect(vi.mocked(executeCommand).mock.calls[0][1]).toEqual([
       '--model',
@@ -79,7 +79,7 @@ describe('geminiExecutor compatibility alias', () => {
 
   it('passes onProgress callback through', async () => {
     const onProgress = vi.fn();
-    await executeGeminiCLI('task', 'gemini-3.1-pro-preview', false, false, { onProgress });
+    await executeAntigravityCLI('task', 'gemini-3.1-pro-preview', false, false, { onProgress });
 
     expect(executeCommand).toHaveBeenCalledWith(
       'agy',

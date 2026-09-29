@@ -34,7 +34,7 @@ export const startLunaBuildCouncilTool: UnifiedTool = {
   }),
   execute: async (args, context) => {
     const cwd = canonicalWorkspace(context?.cwd ?? process.cwd());
-    const services = workflowToolRuntime(cwd, context?.logger);
+    const services = workflowToolRuntime({ ...context, cwd });
     const revision = createLunaBuildCouncilDefinition({
       builderCount: args.builderCount as number,
     });
@@ -105,7 +105,7 @@ export const listWorkflowRunsTool: UnifiedTool = {
     limit: z.number().int().min(1).max(100).default(20),
   }),
   execute: async (args, context) => {
-    const services = workflowToolRuntime(context?.cwd ?? process.cwd(), context?.logger);
+    const services = workflowToolRuntime(context);
     return JSON.stringify({ runs: services.controlPlane.listRuns(args.limit as number) }, null, 2);
   },
 };
@@ -117,7 +117,7 @@ export const getWorkflowRunTool: UnifiedTool = {
   timeoutClass: 'none',
   zodSchema: z.object({ runId: z.string().uuid() }),
   execute: async (args, context) => {
-    const services = workflowToolRuntime(context?.cwd ?? process.cwd(), context?.logger);
+    const services = workflowToolRuntime(context);
     return JSON.stringify(services.controlPlane.getRunSnapshot(args.runId as string), null, 2);
   },
 };

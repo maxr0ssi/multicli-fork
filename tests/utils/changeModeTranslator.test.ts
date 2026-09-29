@@ -32,6 +32,8 @@ describe('formatChangeModeResponse', () => {
 
     expect(result).toContain('CHANGEMODE OUTPUT');
     expect(result).toContain('Antigravity has analyzed');
+    expect(result).toContain('Verify each old-code block matches the current file');
+    expect(result).not.toContain('WITHOUT reading');
     expect(result).not.toContain('Gemini has analyzed');
     expect(result).toContain('src/app.ts');
     expect(result).toContain('const x = 1;');
@@ -47,24 +49,24 @@ describe('formatChangeModeResponse', () => {
     expect(result).toContain('across 5 chunks');
   });
 
-  it('should include fetch-chunk instructions for non-final chunks with a cacheKey', () => {
+  it('should include Fetch-Antigravity-Chunk instructions for non-final chunks with a cacheKey', () => {
     const edits = [makeEdit('src/a.ts', 'old', 'new')];
     const chunkInfo = { current: 1, total: 3, cacheKey: 'abc-123' };
     const result = formatChangeModeResponse(edits, chunkInfo);
 
-    expect(result).toContain('fetch-chunk');
+    expect(result).toContain('Fetch-Antigravity-Chunk');
     expect(result).toContain('cacheKey="abc-123"');
     expect(result).toContain('chunkIndex=2');
     expect(result).toContain('Next Step');
     expect(result).toContain('2 of 3');
   });
 
-  it('should not include fetch-chunk instructions for the final chunk', () => {
+  it('should not include Fetch-Antigravity-Chunk instructions for the final chunk', () => {
     const edits = [makeEdit('src/a.ts', 'old', 'new')];
     const chunkInfo = { current: 3, total: 3, cacheKey: 'abc-123' };
     const result = formatChangeModeResponse(edits, chunkInfo);
 
-    expect(result).not.toContain('fetch-chunk');
+    expect(result).not.toContain('Fetch-Antigravity-Chunk');
     expect(result).not.toContain('Next Step');
   });
 

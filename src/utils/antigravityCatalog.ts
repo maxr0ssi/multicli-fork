@@ -87,7 +87,7 @@ export function classifyAntigravityModel(modelId: string): AntigravityTier {
   return 'balanced';
 }
 
-export function formatAntigravityCatalog(raw: string, deprecatedAlias = false): string {
+export function formatAntigravityCatalog(raw: string): string {
   const models = parseAntigravityModels(raw);
   const buckets: Record<AntigravityTier, string[]> = {
     fast: [],
@@ -100,10 +100,6 @@ export function formatAntigravityCatalog(raw: string, deprecatedAlias = false): 
   }
 
   const lines: string[] = [];
-  if (deprecatedAlias) {
-    lines.push('DEPRECATION: List-Gemini-Models is a compatibility alias. Antigravity via `agy` is the Google backend. Use List-Antigravity-Models and Ask-Antigravity for new workflows.\n');
-  }
-
   lines.push('ANTIGRAVITY — Available Models\n');
   lines.push('MODEL SELECTION RULE: Pass the exact model name returned by `agy models`. Default to the balanced tier for most tasks; use powerful for complex reasoning; reserve fast for trivial or latency-sensitive work.\n');
 
@@ -151,7 +147,6 @@ function formatModelDiscoveryFailure(error: unknown, cachedOutput?: string): str
 
 export async function getAntigravityClassifiedCatalog(
   context?: ToolExecutionContext,
-  deprecatedAlias = false,
 ): Promise<string> {
   try {
     const raw = await executeCommand(
@@ -160,12 +155,9 @@ export async function getAntigravityClassifiedCatalog(
       context,
     );
     cachedModelsOutput = raw;
-    return formatAntigravityCatalog(raw, deprecatedAlias);
+    return formatAntigravityCatalog(raw);
   } catch (error) {
     const failure = formatModelDiscoveryFailure(error, cachedModelsOutput);
-    if (deprecatedAlias) {
-      return `DEPRECATION: List-Gemini-Models is a compatibility alias. Antigravity via \`agy\` is the Google backend. Use List-Antigravity-Models and Ask-Antigravity for new workflows.\n\n${failure}`;
-    }
     return failure;
   }
 }

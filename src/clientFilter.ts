@@ -8,8 +8,7 @@ import { UnifiedTool } from './tools/registry.js';
 const CLIENT_EXCLUSIONS: Record<string, NonNullable<UnifiedTool['category']>[]> = {
   'claude-code':            ['claude'],
   'codex-mcp-client':       ['codex'],
-  'gemini-cli-mcp-client':  ['antigravity', 'gemini'],
-  'antigravity-cli-mcp-client': ['antigravity', 'gemini'],
+  'antigravity-cli-mcp-client': ['antigravity'],
   'opencode':               ['opencode'],
 };
 

@@ -75,7 +75,7 @@ describe('cliDetector', () => {
       process.env.QA_NO_CLIS = 'true';
 
       const result = await detectAvailableClis();
-      expect(result).toEqual({ antigravity: false, gemini: false, codex: false, claude: false, opencode: false });
+      expect(result).toEqual({ antigravity: false, codex: false, claude: false, opencode: false });
       // spawn should not be called at all
       expect(spawn).not.toHaveBeenCalled();
     });
@@ -101,7 +101,7 @@ describe('cliDetector', () => {
       mocks[3].emitClose(1); // opencode
 
       const result = await promise;
-      expect(result).toEqual({ antigravity: true, gemini: true, codex: false, claude: true, opencode: false });
+      expect(result).toEqual({ antigravity: true, codex: false, claude: true, opencode: false });
     });
   });
 });

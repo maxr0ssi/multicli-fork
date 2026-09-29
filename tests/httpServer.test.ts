@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:net';
-import { mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+
+import { pathToFileURL } from 'node:url';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -25,6 +27,8 @@ vi.mock('../src/utils/commandExecutor.js', async (importOriginal) => {
 
 import { detectAvailableClis } from '../src/utils/cliDetector.js';
 import { executeCommand } from '../src/utils/commandExecutor.js';
+import { WorkflowRuntimeOwner } from '../src/tools/workflow-tool-runtime.js';
+import { createServerRuntime } from '../src/serverApp.js';
 import { startHttpServer } from '../src/httpServer.js';
 import type { MultiCliHttpServer } from '../src/httpServer.js';
 import type { MultiCliConfig } from '../src/config.js';
@@ -99,7 +103,6 @@ describe.skipIf(!canBindLoopback)('httpServer', () => {
     vi.clearAllMocks();
     vi.mocked(detectAvailableClis).mockResolvedValue({
       antigravity: false,
-      gemini: false,
       codex: false,
       claude: true,
       opencode: false,
@@ -197,6 +200,82 @@ describe.skipIf(!canBindLoopback)('httpServer', () => {
 
     expect(server.workspace).toBe(workspace);
     expect(await bootstrap.json()).toMatchObject({ workspace });
+  });
+
+  it('closes the allocated runtime when the HTTP port cannot be bound', async () => {
+    const config = await createHttpConfig();
+    server = await startHttpServer(config);
+    const closeFailedRuntime = vi.spyOn(WorkflowRuntimeOwner.prototype, 'close');
+    await expect(startHttpServer(config)).rejects.toThrow(/EADDRINUSE/);
+    expect(closeFailedRuntime).toHaveBeenCalledTimes(1);
+    const failedOwner = closeFailedRuntime.mock.contexts[0];
+    expect(() => failedOwner.get(server!.workspace)).toThrow('closed');
+    expect(server.runtime.workflows.get(server.workspace).orchestrator.closed).toBe(false);
+    expect((await fetch(server.healthUrl)).ok).toBe(true);
+  });
+
+  it('leaves a supplied runtime alive when a borrowing listener closes or fails to bind', async () => {
+    const config = await createHttpConfig();
+    const shared = await createServerRuntime(config);
+    let second: MultiCliHttpServer | undefined;
+    try {
+      server = await startHttpServer(config, undefined, shared);
+      second = await startHttpServer({ ...config, httpPort: await findAvailablePort() }, undefined, shared);
+      const workflow = shared.workflows.get(server.workspace);
+      const closeRuntime = vi.spyOn(workflow.orchestrator, 'close');
+      await expect(startHttpServer(config, undefined, shared)).rejects.toThrow(/EADDRINUSE/);
+      expect(workflow.orchestrator.closed).toBe(false);
+      await expect(startHttpServer({ ...config, runStorePath: ':memory:' }, undefined, shared)).rejects.toThrow('must match');
+      await server.close();
+      expect(workflow.orchestrator.closed).toBe(false);
+      expect(closeRuntime).not.toHaveBeenCalled();
+      expect((await fetch(second.healthUrl)).ok).toBe(true);
+      await second.close();
+      expect(closeRuntime).not.toHaveBeenCalled();
+      await shared.workflows.close();
+      expect(closeRuntime).toHaveBeenCalledTimes(1);
+    } finally {
+      await second?.close();
+      await shared.workflows.close();
+    }
+  });
+
+  it('shares the configured workflow runtime with MCP and keeps it alive after a session closes', async () => {
+    const config = await createHttpConfig();
+    const environmentStore = path.join(config.serviceRootDir, 'ignored-environment.sqlite');
+    vi.stubEnv('MULTICLI_RUN_STORE_PATH', environmentStore);
+    try {
+      server = await startHttpServer(config);
+      const workflowRuntime = server.runtime.workflows.get(server.workspace);
+      expect(workflowRuntime.controlPlane).toBe(server.controlPlane);
+      const closeRuntime = vi.spyOn(workflowRuntime.orchestrator, 'close');
+      const revision = server.controlPlane.ledger.listWorkflowRevisions()[0];
+      const run = server.controlPlane.startRun({
+        workflowRevisionId: revision.id,
+        workspace: server.workspace,
+        runInput: { objective: 'List this run without executing it' },
+      });
+      client = new Client({ name: 'http-test-client', version: '1.0.0' }, { capabilities: { roots: {} } });
+      client.setRequestHandler(ListRootsRequestSchema, async () => ({
+        roots: [{ uri: pathToFileURL(server!.workspace).href }],
+      }));
+      const transport = new StreamableHTTPClientTransport(new URL(server.url), {
+        requestInit: { headers: { Authorization: 'Bearer test-token' } },
+      });
+      await client.connect(transport);
+      const result = await client.callTool({ name: 'List-Workflow-Runs', arguments: {} }, CallToolResultSchema);
+      expect(result.isError).toBe(false);
+      expect(JSON.parse(result.content[0].text as string).runs).toContainEqual(expect.objectContaining({ id: run.run.id }));
+      expect(existsSync(environmentStore)).toBe(false);
+      await transport.terminateSession();
+      expect(workflowRuntime.orchestrator.closed).toBe(false);
+      expect(closeRuntime).not.toHaveBeenCalled();
+      await Promise.all([server.close(), server.close()]);
+      expect(closeRuntime).toHaveBeenCalledTimes(1);
+      expect(workflowRuntime.orchestrator.closed).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('expires idle sessions only after active tool work finishes', async () => {

@@ -37,6 +37,7 @@ import type { MultiCliSessionContext, TaskExecution } from './types.js';
 type HandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 export interface RegisterToolHandlersOptions {
+  workflowRuntime: NonNullable<ToolExecutionContext['workflowRuntime']>;
   server: Server;
   config: MultiCliConfig;
   logger: Logger;
@@ -97,6 +98,7 @@ function createExecutionContext(
   taskId?: string,
 ): ToolExecutionContext {
   return {
+    workflowRuntime: options.workflowRuntime,
     signal,
     onProgress: output => progressReporter.onOutput(output),
     timeoutMs: getTimeoutForTool(toolName, options.config),

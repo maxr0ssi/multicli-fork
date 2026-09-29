@@ -8,17 +8,14 @@ const inputSchema = z.object({
   chunkIndex: z.number().min(1).describe("Which chunk to retrieve (1-based index)")
 });
 
-function createFetchChunkTool(name: string, category: 'antigravity' | 'gemini', deprecated = false): UnifiedTool {
-  return {
-  name,
-  description: deprecated
-    ? 'Deprecated compatibility alias for Fetch-Antigravity-Chunk. Retrieves cached chunks from an Antigravity changeMode response.'
-    : 'Retrieves cached chunks from an Antigravity changeMode response. Use this to get subsequent chunks after receiving a partial changeMode response.',
+export const fetchAntigravityChunkTool: UnifiedTool = {
+  name: 'Fetch-Antigravity-Chunk',
+  description: 'Retrieve a cached chunk from an Antigravity changeMode response.',
 
   zodSchema: inputSchema,
 
   prompt: {
-    description: deprecated ? 'Deprecated alias: fetch the next Antigravity response chunk' : 'Fetch the next chunk of an Antigravity response',
+    description: 'Fetch the next chunk of an Antigravity response',
     arguments: [
       {
         name: 'cacheKey',
@@ -33,7 +30,7 @@ function createFetchChunkTool(name: string, category: 'antigravity' | 'gemini', 
     ]
   },
 
-  category,
+  category: 'antigravity',
 
   execute: async (args: any): Promise<string> => {
     const { cacheKey, chunkIndex } = args;
@@ -68,7 +65,3 @@ function createFetchChunkTool(name: string, category: 'antigravity' | 'gemini', 
     return result;
   },
 };
-}
-
-export const fetchAntigravityChunkTool: UnifiedTool = createFetchChunkTool('Fetch-Antigravity-Chunk', 'antigravity');
-export const fetchChunkTool: UnifiedTool = createFetchChunkTool('Fetch-Chunk', 'gemini', true);

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 
 import { loadConfig, type MultiCliConfig } from './config.js';
-import { LocalControlPlane } from './controlPlane/controlPlane.js';
+import type { LocalControlPlane } from './controlPlane/controlPlane.js';
 import { mountLocalControlApi } from './controlPlane/httpApi.js';
 import {
   StudioAuthManager,
@@ -17,7 +17,6 @@ import {
   validateHttpConfig,
 } from './http/security.js';
 import { createLogger, type Logger } from './logger.js';
-import { SqliteRunLedger } from './persistence/runLedger.js';
 import {
   createServerRuntime,
   type MultiCliRuntime,
@@ -30,9 +29,6 @@ import {
 } from './workflows/claudeWorkflows.js';
 import { createHarmonyDeliveryWorkflow } from './workflows/dsl.js';
 import { LUNA_BUILD_COUNCIL } from './workflows/lunaBuildCouncil.js';
-import { LocalSubscriptionCliExecutor } from './workflows/executor.js';
-import { GoalSessionService } from './workflows/goalSession.js';
-import { LocalWorkflowRunner } from './workflows/runner.js';
 
 export interface MultiCliHttpServer {
   readonly config: MultiCliConfig;
@@ -63,11 +59,15 @@ export async function startHttpServer(
   options: StartHttpServerOptions = {},
 ): Promise<MultiCliHttpServer> {
   validateHttpConfig(config);
+  const ownsRuntime = runtime === undefined;
   const resolvedRuntime = runtime ?? await createServerRuntime(config, rootLogger);
+  if (runtime) runtime.workflows.assertCompatible(config);
   const workspace = path.resolve(options.workspace ?? process.cwd());
 
   const logger = rootLogger.child({ component: 'httpServer' });
-  const controlPlane = new LocalControlPlane(new SqliteRunLedger(config.runStorePath));
+  let closing: Promise<void> | undefined;
+  const workflowRuntime = resolvedRuntime.workflows.get(workspace);
+  const { controlPlane, runner: workflowRunner, artifactRoot, orchestrator } = workflowRuntime;
   for (const definition of [
     LUNA_BUILD_COUNCIL,
     CLAUDE_DEEP_THINK,
@@ -80,33 +80,18 @@ export async function startHttpServer(
     bearerToken: config.httpAuthToken!,
     sessionTtlMs: config.studioSessionTtlMs,
   });
-  const artifactRoot = path.join(path.dirname(config.runStorePath), 'artifacts');
-  const providerExecutor = new LocalSubscriptionCliExecutor({
-    killGraceMs: config.killGraceMs,
-    logger: rootLogger.child({ component: 'workflowProvider' }),
-  });
-  const workflowRunner = new LocalWorkflowRunner({
-    controlPlane,
-    executor: providerExecutor,
-    workspace,
-    artifactRoot,
-  });
-  const goalSessions = new GoalSessionService({
-    store: controlPlane.ledger,
-    executor: providerExecutor,
-    artifactRoot,
-    onRunEvents: (runId, afterSequence) => {
-      controlPlane.emitPersistedEvents(runId, afterSequence);
-    },
-  });
   const goalSessionCommands = new StudioGoalSessionCommands({
     controlPlane,
-    sessions: goalSessions,
+    sessions: orchestrator.goalSessions!,
     workspace,
     logger: rootLogger.child({ component: 'studioGoalSessions' }),
   });
 
   const app = createMcpExpressApp({ host: config.httpHost });
+  app.use((_req: any, res: any, next: () => void) => {
+    if (closing) { res.status(503).send('Server shutting down'); return; }
+    next();
+  });
   const originValidation = createOriginValidationMiddleware(logger, config.httpHost);
   const authValidation = createAuthMiddleware(logger, config.httpAuthToken!);
   const sessions = new McpHttpSessionHost({
@@ -194,10 +179,25 @@ export async function startHttpServer(
   });
   sessions.mount(app, originValidation, authValidation);
 
-  const listener = await new Promise<HttpServer>((resolve, reject) => {
-    const server = app.listen(config.httpPort, config.httpHost, () => resolve(server));
-    server.once('error', reject);
-  });
+  let listener: HttpServer;
+  try {
+    listener = await new Promise<HttpServer>((resolve, reject) => {
+      const server = app.listen(config.httpPort, config.httpHost, (error?: Error) => {
+        if (error) reject(error);
+        else resolve(server);
+      });
+      server.once('error', reject);
+    });
+  } catch (error) {
+    controlApi.close();
+    studioAuth.close();
+    await Promise.allSettled([
+      sessions.close('HTTP startup failed'),
+      goalSessionCommands.shutdown('HTTP startup failed'),
+      ...(ownsRuntime ? [resolvedRuntime.workflows.close()] : []),
+    ]);
+    throw error;
+  }
 
   logger.info('http_server_started', {
     host: config.httpHost,
@@ -227,31 +227,25 @@ export async function startHttpServer(
       const nonce = studioAuth.issueLaunchNonce(target);
       return `${baseUrl}${controlApi.studioPath}/session?nonce=${encodeURIComponent(nonce)}`;
     },
-    async close(reason = 'HTTP server shutting down') {
-      logger.info('http_server_closing', {
-        reason,
-        sessionCount: sessions.size,
-      });
-
-      await sessions.close(reason);
-      controlApi.close();
-      studioAuth.close();
-      await goalSessionCommands.shutdown(reason);
-      await workflowRunner.close();
-
-      await new Promise<void>((resolve, reject) => {
-        listener.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve();
+    close(reason = 'HTTP server shutting down') {
+      closing ??= (async () => {
+        logger.info('http_server_closing', { reason, sessionCount: sessions.size });
+        const listenerClosed = new Promise<void>((resolve, reject) => {
+          listener.close(error => error ? reject(error) : resolve());
         });
-      });
-
-      controlPlane.close();
-
-      logger.info('http_server_closed', { reason });
+        controlApi.close();
+        studioAuth.close();
+        const results = await Promise.allSettled([
+          sessions.close(reason),
+          goalSessionCommands.shutdown(reason),
+          ...(ownsRuntime ? [resolvedRuntime.workflows.close()] : []),
+          listenerClosed,
+        ]);
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure?.status === 'rejected') throw failure.reason;
+        logger.info('http_server_closed', { reason });
+      })();
+      return closing;
     },
   };
 }

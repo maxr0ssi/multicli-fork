@@ -192,6 +192,33 @@ describe('LocalOrchestrator', () => {
     expect(() => orchestrator.list()).toThrow(/closed/);
   });
 
+  it.each([false, true])('drains active goal turns before closing SQLite (runner failure: %s)', async runnerFails => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'multicli-goal-close-'));
+    temporaryDirectories.push(directory);
+    let finishProvider: (error: Error) => void;
+    let aborted = false;
+    const execute = vi.fn((request: ProviderExecutionRequest) => new Promise<never>((_resolve, reject) => {
+      finishProvider = reject;
+      request.signal?.addEventListener('abort', () => { aborted = true; }, { once: true });
+    }));
+    const orchestrator = createLocalOrchestrator({ workspace: directory, storePath: ':memory:', executor: { execute } });
+    const goal = orchestrator.openGoal({ goal: 'Long-running work', profile: profiles.sol() });
+    const pending = goal.turn('Continue').catch(error => error);
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
+    if (runnerFails) vi.spyOn(orchestrator.runner, 'close').mockRejectedValue(new Error('runner cleanup failed'));
+    const closing = orchestrator.close().catch(error => error);
+    await Promise.resolve();
+    expect(aborted).toBe(true);
+    expect(orchestrator.controlPlane.ledger.getGoalSession(goal.id)?.turnState).toBe('running');
+    finishProvider!(new Error('provider stopped'));
+    expect(await pending).toMatchObject({ message: 'provider stopped' });
+    const closeResult = await closing;
+    if (runnerFails) expect(closeResult).toMatchObject({ message: 'runner cleanup failed' });
+    else expect(closeResult).toBeUndefined();
+    expect(() => orchestrator.controlPlane.ledger.getGoalSession(goal.id)).toThrow();
+    await expect(goal.turn('Too late')).rejects.toThrow(/shut down|closed/i);
+  });
+
   it('projects run-bound goal lifecycle events to live subscribers without bodies', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'multicli-goal-events-'));
     temporaryDirectories.push(directory);

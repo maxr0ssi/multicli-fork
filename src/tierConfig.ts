@@ -10,7 +10,7 @@ export interface TierDisplayConfig {
 }
 
 export type TierName = 'fast' | 'balanced' | 'powerful';
-export type CLIName = 'claude' | 'antigravity' | 'gemini' | 'codex' | 'opencode';
+export type CLIName = 'claude' | 'antigravity' | 'codex' | 'opencode';
 /** CLIs that use the static generated model catalog (not dynamic discovery). */
 export type StaticCLIName = 'claude' | 'codex';
 
@@ -45,20 +45,6 @@ export const TIER_CONFIG: Record<CLIName, Record<TierName, TierDisplayConfig>> =
       label: 'Powerful',
       useWhen:
         'Complex analysis, deep reasoning, large codebase understanding, nuanced opinions, architectural decisions.',
-    },
-  },
-  gemini: {
-    fast: {
-      label: 'Deprecated Alias',
-      useWhen: 'Use List-Antigravity-Models instead. Gemini names route to Antigravity via agy.',
-    },
-    balanced: {
-      label: 'Deprecated Alias (DEFAULT)',
-      useWhen: 'Use Ask-Antigravity for new workflows; Ask-Gemini remains a compatibility alias.',
-    },
-    powerful: {
-      label: 'Deprecated Alias',
-      useWhen: 'Use exact Antigravity model names returned by agy models.',
     },
   },
   codex: {
@@ -99,8 +85,6 @@ export const CLI_NOTES: Record<CLIName, string> = {
   claude: 'Run Claude-Help for the latest CLI options.',
   antigravity:
     'Antigravity models are dynamically discovered at runtime through agy models because discovery depends on local sign-in.',
-  gemini:
-    'Deprecated alias for Antigravity. Use Antigravity-Help and List-Antigravity-Models for new workflows.',
   codex: 'Run Codex-Help for the latest CLI options. Model IDs may change as OpenAI releases new versions.',
   opencode: 'OpenCode models are dynamically discovered from your configured providers. Models are classified into tiers automatically. Run OpenCode-Help for CLI options.',
 };

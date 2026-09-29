@@ -286,7 +286,9 @@ export class LocalOrchestrator {
     this.#closed = true;
     this.#closing = (async () => {
       try {
-        await this.runner.close();
+        const results = await Promise.allSettled([this.runner.close(), this.goalSessions?.shutdown()]);
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure?.status === 'rejected') throw failure.reason;
       } finally {
         if (this.#ownsControlPlane) this.controlPlane.close();
       }

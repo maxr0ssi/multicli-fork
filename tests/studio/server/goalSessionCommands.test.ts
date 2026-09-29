@@ -121,6 +121,9 @@ describe('StudioGoalSessionCommands', () => {
       text: 'Completed after a long silent interval.',
       sessionId: '11111111-1111-4111-8111-111111111111',
     });
+    await vi.waitFor(() => {
+      expect(controlPlane.ledger.getGoalSession(opened.id)?.turnCount).toBe(1);
+    });
     await commands.shutdown();
     expect(controlPlane.ledger.getGoalSession(opened.id)).toMatchObject({
       turnCount: 1,
@@ -146,6 +149,9 @@ describe('StudioGoalSessionCommands', () => {
       accepted: true,
       sessionId: opened.id,
     });
+    await vi.waitFor(() => {
+      expect(controlPlane.ledger.getGoalSession(opened.id)?.turnCount).toBe(1);
+    });
     await commands.shutdown();
 
     expect(controlPlane.ledger.getGoalSession(opened.id)).toMatchObject({
@@ -156,6 +162,18 @@ describe('StudioGoalSessionCommands', () => {
     });
     expect(controlPlane.ledger.getRun(run.id)).toEqual(terminal);
     expect(controlPlane.ledger.listEvents(run.id).at(-1)?.type).toBe('run.failed');
+  });
+
+  it('does not start accepted work after shutdown cancels it', async () => {
+    const execute = vi.fn(async () => ({ text: 'must not execute' }));
+    const { commands, controlPlane, run } = setup(execute);
+    const opened = commands.open({
+      runId: run.id, profileId: LUNA_MAX_BUILDER_PROFILE.id, goal: 'Cancelled before execution',
+    });
+    commands.instruct(opened.id, 'Do not run after shutdown');
+    await commands.shutdown();
+    expect(execute).not.toHaveBeenCalled();
+    expect(controlPlane.ledger.getGoalSession(opened.id)?.turnCount).toBe(0);
   });
 
   it('rejects foreign run and session commands before provider work or mutation', async () => {

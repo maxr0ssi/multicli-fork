@@ -1,49 +1,79 @@
 import path from 'node:path';
 
-import { loadConfig } from '../config.js';
-import { LocalControlPlane } from '../controlPlane/controlPlane.js';
+import type { MultiCliConfig } from '../config.js';
+import type { ToolExecutionContext } from '../execution.js';
+import { createLocalOrchestrator, type LocalOrchestrator } from '../localOrchestrator.js';
 import type { Logger } from '../logger.js';
-import { SqliteRunLedger } from '../persistence/runLedger.js';
-import { LocalSubscriptionCliExecutor } from '../workflows/executor.js';
-import { LocalWorkflowRunner } from '../workflows/runner.js';
 import { canonicalWorkspace } from '../utils/canonicalWorkspace.js';
 
 export interface WorkflowToolRuntime {
-  readonly controlPlane: LocalControlPlane;
-  readonly runner: LocalWorkflowRunner;
+  readonly orchestrator: LocalOrchestrator;
+  readonly controlPlane: LocalOrchestrator['controlPlane'];
+  readonly runner: LocalOrchestrator['runner'];
   readonly storePath: string;
+  readonly artifactRoot: string;
 }
 
-const runtimes = new Map<string, WorkflowToolRuntime>();
+/** One owner per server; HTTP sessions borrow its workspace runtimes. */
+export class WorkflowRuntimeOwner {
+  readonly #runtimes = new Map<string, WorkflowToolRuntime>();
+  #closing: Promise<void> | undefined;
 
-/** Share one local ledger/runtime across every workflow-facing MCP tool. */
-export function workflowToolRuntime(
-  cwd: string,
-  logger?: Logger,
-): WorkflowToolRuntime {
-  const workspace = canonicalWorkspace(cwd);
-  const config = loadConfig();
-  const storePath = config.runStorePath === ':memory:'
-    ? config.runStorePath
-    : path.resolve(config.runStorePath);
-  const key = `${storePath}\0${workspace}`;
-  const existing = runtimes.get(key);
-  if (existing) return existing;
+  readonly storePath: string;
+  readonly #killGraceMs: number;
 
-  const controlPlane = new LocalControlPlane(new SqliteRunLedger(storePath));
-  const runtime = {
-    controlPlane,
-    storePath,
-    runner: new LocalWorkflowRunner({
-      controlPlane,
-      executor: new LocalSubscriptionCliExecutor({
-        killGraceMs: config.killGraceMs,
-        logger,
-      }),
+  constructor(config: MultiCliConfig, private readonly logger?: Logger) {
+    this.storePath = config.runStorePath === ':memory:' ? ':memory:' : path.resolve(config.runStorePath);
+    this.#killGraceMs = config.killGraceMs;
+  }
+
+  assertCompatible(config: MultiCliConfig): void {
+    const storePath = config.runStorePath === ':memory:' ? ':memory:' : path.resolve(config.runStorePath);
+    if (storePath !== this.storePath || config.killGraceMs !== this.#killGraceMs) {
+      throw new Error('Supplied workflow runtime must match the server runStorePath and killGraceMs');
+    }
+  }
+
+  get(cwd: string): WorkflowToolRuntime {
+    if (this.#closing) throw new Error('Workflow runtime owner is closed');
+    const workspace = canonicalWorkspace(cwd);
+    const existing = this.#runtimes.get(workspace);
+    if (existing) return existing;
+    const storePath = this.storePath;
+    const artifactRoot = storePath === ':memory:'
+      ? path.join(workspace, '.multicli', 'artifacts')
+      : path.join(path.dirname(storePath), 'artifacts');
+    const orchestrator = createLocalOrchestrator({
       workspace,
-      artifactRoot: path.join(path.dirname(storePath), 'artifacts'),
-    }),
-  };
-  runtimes.set(key, runtime);
-  return runtime;
+      storePath,
+      artifactRoot,
+      killGraceMs: this.#killGraceMs,
+      logger: this.logger,
+    });
+    const runtime = {
+      orchestrator,
+      controlPlane: orchestrator.controlPlane,
+      runner: orchestrator.runner,
+      storePath,
+      artifactRoot,
+    };
+    this.#runtimes.set(workspace, runtime);
+    return runtime;
+  }
+
+  close(): Promise<void> {
+    this.#closing ??= Promise.allSettled(
+      [...this.#runtimes.values()].map(runtime => runtime.orchestrator.close()),
+    ).then(results => {
+      this.#runtimes.clear();
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure?.status === 'rejected') throw failure.reason;
+    });
+    return this.#closing;
+  }
+}
+
+export function workflowToolRuntime(context?: ToolExecutionContext): WorkflowToolRuntime {
+  if (!context?.workflowRuntime) throw new Error('Workflow tools require a server-owned runtime');
+  return context.workflowRuntime(context.cwd ?? process.cwd());
 }

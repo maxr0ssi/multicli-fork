@@ -15,6 +15,14 @@ describe('package scripts', () => {
     expect(manifest.files).toContain('NOTICE');
   });
 
+  it('exposes only the maintained CLI and keeps the lockfile executable map in sync', () => {
+    const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const lockfile = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+    expect(manifest.bin).toEqual({ multicli: 'dist/index.js' });
+    expect(lockfile.packages[''].bin).toEqual(manifest.bin);
+    expect(manifest.scripts.orchestrate).toBeUndefined();
+  });
+
   it('fails the build when compilation or catalog copying fails', () => {
     const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {
       scripts: Record<string, string>;

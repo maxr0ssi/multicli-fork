@@ -55,8 +55,8 @@ describe('registry', () => {
   describe('getToolDefinitions', () => {
     it('converts zod schema to MCP Tool format', () => {
       const tool = makeTool({
-        name: 'Ask-Gemini',
-        description: 'Ask Gemini a question',
+        name: 'Ask-Antigravity',
+        description: 'Ask Antigravity a question',
         zodSchema: z.object({
           prompt: z.string().describe('The prompt'),
           model: z.string().describe('Model ID'),
@@ -66,8 +66,8 @@ describe('registry', () => {
 
       const defs = getToolDefinitions();
       expect(defs).toHaveLength(1);
-      expect(defs[0].name).toBe('Ask-Gemini');
-      expect(defs[0].description).toBe('Ask Gemini a question');
+      expect(defs[0].name).toBe('Ask-Antigravity');
+      expect(defs[0].description).toBe('Ask Antigravity a question');
       expect(defs[0].inputSchema.type).toBe('object');
       expect(defs[0].inputSchema.properties).toHaveProperty('prompt');
       expect(defs[0].inputSchema.properties).toHaveProperty('model');
@@ -111,7 +111,7 @@ describe('registry', () => {
     });
 
     it('adds readOnlyHint annotation to List-* tools', () => {
-      const tool = makeTool({ name: 'List-Gemini-Models' });
+      const tool = makeTool({ name: 'List-Antigravity-Models' });
       toolRegistry.push(tool);
 
       const defs = getToolDefinitions();
@@ -134,8 +134,8 @@ describe('registry', () => {
       });
     });
 
-    it('adds readOnlyHint annotation to Fetch-Chunk', () => {
-      const tool = makeTool({ name: 'Fetch-Chunk' });
+    it('adds readOnlyHint annotation to Fetch-Antigravity-Chunk', () => {
+      const tool = makeTool({ name: 'Fetch-Antigravity-Chunk' });
       toolRegistry.push(tool);
 
       const defs = getToolDefinitions();
@@ -146,8 +146,8 @@ describe('registry', () => {
       });
     });
 
-    it('adds readOnlyHint annotation to Claude-Gemini-Codex fallback', () => {
-      const tool = makeTool({ name: 'Claude-Gemini-Codex' });
+    it('adds readOnlyHint annotation to Multi-CLI-Help fallback', () => {
+      const tool = makeTool({ name: 'Multi-CLI-Help' });
       toolRegistry.push(tool);
 
       const defs = getToolDefinitions();
@@ -303,18 +303,18 @@ describe('registry', () => {
   describe('getPromptMessage', () => {
     it('formats message with prompt and parameters', () => {
       const tool = makeTool({
-        name: 'Ask-Gemini',
-        prompt: { description: 'Ask Gemini' },
+        name: 'Ask-Antigravity',
+        prompt: { description: 'Ask Antigravity' },
       });
       toolRegistry.push(tool);
 
-      const msg = getPromptMessage('Ask-Gemini', {
+      const msg = getPromptMessage('Ask-Antigravity', {
         prompt: 'explain this',
         model: 'gemini-2.5-flash',
         sandbox: true,
       });
 
-      expect(msg).toContain('Use the Ask-Gemini tool');
+      expect(msg).toContain('Use the Ask-Antigravity tool');
       expect(msg).toContain('explain this');
       expect(msg).toContain('model: gemini-2.5-flash');
       expect(msg).toContain('[sandbox]');

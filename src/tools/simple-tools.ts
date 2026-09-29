@@ -8,21 +8,6 @@ import { CLI } from '../constants.js';
 
 const helpArgsSchema = z.object({});
 
-export const geminiHelpTool: UnifiedTool = {
-  name: "Gemini-Help",
-  description: "Deprecated compatibility alias for Antigravity-Help. Executes `agy --help`.",
-  zodSchema: helpArgsSchema,
-  prompt: {
-    description: "Deprecated alias: receive help information from the Antigravity CLI",
-  },
-  category: 'gemini',
-  timeoutClass: 'help',
-  execute: async (_args, context) => {
-    const help = await executeCommand(CLI.COMMANDS.ANTIGRAVITY, [CLI.ANTIGRAVITY_FLAGS.HELP], context);
-    return `DEPRECATION: Gemini-Help is a compatibility alias. This help was produced by Antigravity via \`agy --help\`. Use Antigravity-Help for new workflows.\n\n${help}`;
-  },
-};
-
 export const antigravityHelpTool: UnifiedTool = {
   name: "Antigravity-Help",
   description: "Receive help information from the Antigravity CLI",
@@ -60,19 +45,6 @@ export const claudeHelpTool: UnifiedTool = {
 };
 
 const noArgsSchema = z.object({});
-
-export const geminiListModelsTool: UnifiedTool = {
-  name: "List-Gemini-Models",
-  description: "Deprecated compatibility alias for List-Antigravity-Models. Lists the full Antigravity model catalog from `agy models`; use the exact returned model name.",
-  zodSchema: noArgsSchema,
-  prompt: {
-    description: "Deprecated alias: list available Antigravity models with tier classifications",
-  },
-  category: 'gemini',
-  execute: async (_args, context) => {
-    return getAntigravityClassifiedCatalog(context, true);
-  }
-};
 
 export const antigravityListModelsTool: UnifiedTool = {
   name: "List-Antigravity-Models",

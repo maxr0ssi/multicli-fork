@@ -29,8 +29,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "multicli": "dist/index.js",
-    "orchestrate": "dist/orchestratorCli.js"
+    "multicli": "dist/index.js"
   },
   "scripts": {
     "build": "npm run clean && tsc && node scripts/build-studio.mjs && node -e \"require('node:fs').copyFileSync('src/modelCatalog.generated.json', 'dist/modelCatalog.generated.json')\"",
@@ -41,7 +40,6 @@
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
     "refresh-catalog": "npx tsx scripts/refresh-catalog.ts",
-    "orchestrate": "node dist/orchestratorCli.js",
     "harness": "node dist/index.js harness run",
     "try:claude": "npm run build && node examples/claude-deep-task.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
@@ -50,7 +48,6 @@
     "mcp",
     "modelcontextprotocol",
     "antigravity",
-    "gemini",
     "codex",
     "claude",
     "cli",

@@ -22,10 +22,11 @@ import { detectAvailableClis } from '../src/utils/cliDetector.js';
 import { executeCommand, CommandExecutionError } from '../src/utils/commandExecutor.js';
 import { createServerApp } from '../src/serverApp.js';
 import type { MultiCliServerApp } from '../src/serverApp.js';
-import type { MultiCliConfig } from '../src/config.js';
+import { loadConfig, type MultiCliConfig } from '../src/config.js';
 import type { CreateServerAppOptions } from '../src/serverApp.js';
 
 const TEST_CONFIG: MultiCliConfig = {
+  ...loadConfig({}),
   askTimeoutMs: 1000,
   helpTimeoutMs: 500,
   cliDetectTimeoutMs: 100,
@@ -42,7 +43,6 @@ const TEST_CONFIG: MultiCliConfig = {
 async function createConnectedPair(options?: CreateServerAppOptions) {
   vi.mocked(detectAvailableClis).mockResolvedValue({
     antigravity: false,
-    gemini: false,
     codex: false,
     claude: true,
     opencode: false,

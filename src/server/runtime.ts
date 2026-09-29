@@ -5,6 +5,7 @@ import type { ListRootsResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { loadConfig, type MultiCliConfig } from '../config.js';
 import { createLogger, type Logger } from '../logger.js';
+import { WorkflowRuntimeOwner } from '../tools/workflow-tool-runtime.js';
 import { initTools } from '../tools/index.js';
 import type { MultiCliRuntime } from './types.js';
 
@@ -26,6 +27,7 @@ export async function createServerRuntime(
   });
 
   const runtime: MultiCliRuntime = {
+    workflows: new WorkflowRuntimeOwner(config, rootLogger.child({ component: 'workflowRuntime' })),
     availability,
     initializedAt: new Date().toISOString(),
   };

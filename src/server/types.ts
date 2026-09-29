@@ -1,3 +1,4 @@
+import type { WorkflowRuntimeOwner } from '../tools/workflow-tool-runtime.js';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type {
@@ -10,6 +11,7 @@ import type { Logger } from '../logger.js';
 import type { CliAvailability } from '../utils/cliDetector.js';
 
 export interface MultiCliRuntime {
+  workflows: WorkflowRuntimeOwner;
   availability: CliAvailability;
   initializedAt: string;
 }

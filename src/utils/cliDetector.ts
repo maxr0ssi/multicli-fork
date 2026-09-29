@@ -78,7 +78,6 @@ export async function commandExists(
 
 export interface CliAvailability {
   antigravity: boolean;
-  gemini: boolean;
   codex: boolean;
   claude: boolean;
   opencode: boolean;
@@ -96,7 +95,7 @@ export async function detectAvailableClis(
     logger?.info('cli_detection_skipped', {
       reason: 'QA_NO_CLIS=true',
     });
-    return { antigravity: false, gemini: false, codex: false, claude: false, opencode: false };
+    return { antigravity: false, codex: false, claude: false, opencode: false };
   }
 
   logger?.info('cli_detection_started', { timeoutMs });
@@ -107,8 +106,7 @@ export async function detectAvailableClis(
     commandExists(CLI.COMMANDS.OPENCODE, timeoutMs, logger),
   ]);
 
-  const gemini = antigravity;
-  const availability: CliAvailability = { antigravity, gemini, codex, claude, opencode };
+  const availability: CliAvailability = { antigravity, codex, claude, opencode };
   logger?.info('cli_detection_finished', { availability });
 
   return availability;

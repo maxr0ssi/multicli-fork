@@ -238,7 +238,7 @@ describe('commandExecutor', () => {
       const mock = createMockProcess();
       vi.mocked(spawn).mockReturnValue(mock.proc as any);
 
-      const promise = executeCommand('gemini', ['prompt'], {});
+      const promise = executeCommand('agy', ['prompt'], {});
       mock.emitStderr('RESOURCE_EXHAUSTED: quota exceeded');
 
       await expect(promise).rejects.toThrow('quota exhaustion');

@@ -48,7 +48,6 @@ export function createWorkflowDraftTools(options: WorkflowDraftToolOptions = {})
   readonly describeWorkflowDesignTool: UnifiedTool;
   readonly createWorkflowDraftTool: UnifiedTool;
 } {
-  const getRuntime = options.getRuntime ?? workflowToolRuntime;
 
   return {
     describeWorkflowDesignTool: {
@@ -79,10 +78,9 @@ export function createWorkflowDraftTools(options: WorkflowDraftToolOptions = {})
       execute: async (args, context) => {
         const input = workflowDraftProposalSchema.parse(args);
         const cwd = canonicalWorkspace(path.resolve(context?.cwd ?? process.cwd()));
-        const runtime = getRuntime(
-          cwd,
-          context?.logger,
-        );
+        const runtime = options.getRuntime
+          ? options.getRuntime(cwd, context?.logger)
+          : workflowToolRuntime({ ...context, cwd });
         return JSON.stringify(
           createWorkflowDraftService(runtime.controlPlane).propose({
             ...input,

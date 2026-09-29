@@ -18,7 +18,7 @@ before fetching the next chunk.
 
 I have prepared ${edits.length} modification${edits.length === 1 ? '' : 's'} for your codebase.
 
-IMPORTANT: Apply these edits directly WITHOUT reading the files first. The edits below contain exact text matches from the current file contents.
+Verify each old-code block matches the current file before applying its replacement.
 
 `;
 
@@ -47,7 +47,7 @@ Apply these edits in order. Each edit uses exact string matching, so the old_str
 **Next Step**: After applying the edits above, retrieve the next chunk (${chunkInfo.current + 1} of ${chunkInfo.total}) using:
 
 \`\`\`
-fetch-chunk cacheKey="${chunkInfo.cacheKey}" chunkIndex=${chunkInfo.current + 1}
+Fetch-Antigravity-Chunk cacheKey="${chunkInfo.cacheKey}" chunkIndex=${chunkInfo.current + 1}
 \`\`\`
 
 There ${chunkInfo.total - chunkInfo.current === 1 ? 'is' : 'are'} ${chunkInfo.total - chunkInfo.current} more chunk${chunkInfo.total - chunkInfo.current === 1 ? '' : 's'} containing additional edits.

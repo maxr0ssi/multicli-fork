@@ -22,9 +22,9 @@ describe('initTools', () => {
     toolRegistry.push(...savedRegistry);
   });
 
-  it('registers antigravity tools and deprecated gemini aliases when agy is available', async () => {
+  it('registers Antigravity tools without deprecated aliases when agy is available', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: true, gemini: true, codex: false, claude: false, opencode: false,
+      antigravity: true, codex: false, claude: false, opencode: false,
     });
 
     await initTools();
@@ -34,10 +34,10 @@ describe('initTools', () => {
     expect(names).toContain('Ask-Antigravity');
     expect(names).toContain('Fetch-Antigravity-Chunk');
     expect(names).toContain('Antigravity-Help');
-    expect(names).toContain('List-Gemini-Models');
-    expect(names).toContain('Ask-Gemini');
-    expect(names).toContain('Fetch-Chunk');
-    expect(names).toContain('Gemini-Help');
+    expect(names).not.toContain('List-Gemini-Models');
+    expect(names).not.toContain('Ask-Gemini');
+    expect(names).not.toContain('Fetch-Chunk');
+    expect(names).not.toContain('Gemini-Help');
     // Should NOT have codex or claude tools
     expect(names).not.toContain('Ask-Codex');
     expect(names).not.toContain('Ask-Claude');
@@ -46,7 +46,7 @@ describe('initTools', () => {
 
   it('registers codex tools when codex available', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: false, gemini: false, codex: true, claude: false, opencode: false,
+      antigravity: false, codex: true, claude: false, opencode: false,
     });
 
     await initTools();
@@ -64,7 +64,7 @@ describe('initTools', () => {
 
   it('registers claude tools when claude available', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: false, gemini: false, codex: false, claude: true, opencode: false,
+      antigravity: false, codex: false, claude: true, opencode: false,
     });
 
     await initTools();
@@ -81,7 +81,7 @@ describe('initTools', () => {
 
   it('registers opencode tools when opencode available', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: false, gemini: false, codex: false, claude: false, opencode: true,
+      antigravity: false, codex: false, claude: false, opencode: true,
     });
 
     await initTools();
@@ -98,14 +98,14 @@ describe('initTools', () => {
 
   it('registers tools for multiple available CLIs', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: true, gemini: true, codex: true, claude: false, opencode: false,
+      antigravity: true, codex: true, claude: false, opencode: false,
     });
 
     await initTools();
 
     const names = toolRegistry.map(t => t.name);
     expect(names).toContain('Ask-Antigravity');
-    expect(names).toContain('Ask-Gemini');
+    expect(names).not.toContain('Ask-Gemini');
     expect(names).toContain('Ask-Codex');
     expect(names).not.toContain('Ask-Claude');
     expect(names).not.toContain('Ask-OpenCode');
@@ -113,7 +113,7 @@ describe('initTools', () => {
 
   it('keeps durable run inspection available when no provider CLIs are installed', async () => {
     vi.mocked(detectAvailableClis).mockResolvedValue({
-      antigravity: false, gemini: false, codex: false, claude: false, opencode: false,
+      antigravity: false, codex: false, claude: false, opencode: false,
     });
 
     await initTools();
@@ -126,7 +126,7 @@ describe('initTools', () => {
   });
 
   it('returns availability object', async () => {
-    const expected = { antigravity: true, gemini: true, codex: false, claude: true, opencode: false };
+    const expected = { antigravity: true, codex: false, claude: true, opencode: false };
     vi.mocked(detectAvailableClis).mockResolvedValue(expected);
 
     const result = await initTools();

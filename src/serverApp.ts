@@ -46,6 +46,7 @@ export async function createServerApp(
     cwd: process.cwd(),
   };
   const runtime = options.runtime ?? await createServerRuntime(config, rootLogger);
+  if (options.runtime) runtime.workflows.assertCompatible(config);
 
   logger.info('server_app_initializing', { config, runtime, sessionContext });
 
@@ -72,7 +73,7 @@ export async function createServerApp(
   );
 
   let connectedClientName: string | undefined;
-  let closed = false;
+  let closing: Promise<void> | undefined;
 
   const resolveExecutionContext = async (requestLogger: Logger): Promise<{
     cwd?: string;
@@ -131,6 +132,7 @@ export async function createServerApp(
 
   const getConnectedClientName = () => connectedClientName;
   const hasActiveWork = registerToolHandlers({
+    workflowRuntime: cwd => runtime.workflows.get(cwd),
     server,
     config,
     logger,
@@ -151,18 +153,19 @@ export async function createServerApp(
       await server.connect(transport);
       logger.info('server_connect_completed', { transport: transport.constructor.name });
     },
-    async close(reason = 'Server shutting down') {
-      if (closed) {
-        logger.debug('server_close_ignored', { reason });
-        return;
-      }
-
-      closed = true;
-      logger.info('server_close_started', { reason, activeTaskCount: activeTasks.size });
-      abortActiveTasks(reason);
-      taskStore.cleanup();
-      await server.close();
-      logger.info('server_close_completed', { reason });
+    close(reason = 'Server shutting down') {
+      closing ??= (async () => {
+        logger.info('server_close_started', { reason, activeTaskCount: activeTasks.size });
+        abortActiveTasks(reason);
+        taskStore.cleanup();
+        try {
+          await server.close();
+        } finally {
+          if (!options.runtime) await runtime.workflows.close();
+        }
+        logger.info('server_close_completed', { reason });
+      })();
+      return closing;
     },
   };
 }
@@ -173,9 +176,7 @@ export async function startServer(
 ): Promise<MultiCliServerApp> {
   const logger = rootLogger.child({ component: 'startServer' });
   logger.info('stdio_server_starting', { config });
-  const runtime = await createServerRuntime(config, rootLogger);
   const app = await createServerApp(config, rootLogger, {
-    runtime,
     sessionContext: { transport: 'stdio', cwd: process.cwd() },
     onClientInitialized: async (server, _clientInfo, sessionContext) => {
       const resolved = await resolveWorkingDirectoryFromRoots(

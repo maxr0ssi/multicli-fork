@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { askAntigravityTool } from '../../src/tools/ask-antigravity.tool.js';
-import { askGeminiTool } from '../../src/tools/ask-gemini.tool.js';
 import { askOpencodeTool } from '../../src/tools/ask-opencode.tool.js';
 import { askClaudeTool } from '../../src/tools/ask-claude.tool.js';
 import { askCodexTool } from '../../src/tools/ask-codex.tool.js';
@@ -8,7 +7,7 @@ import { importantReadNowTool } from '../../src/tools/important-read-now.tool.js
 import { getToolDefinitions } from '../../src/tools/registry.js';
 import { claudeListModelsTool, codexListModelsTool, opencodeListModelsTool } from '../../src/tools/simple-tools.js';
 
-const providers = [askAntigravityTool, askGeminiTool, askOpencodeTool, askClaudeTool, askCodexTool];
+const providers = [askAntigravityTool, askOpencodeTool, askClaudeTool, askCodexTool];
 
 describe('provider tool contracts', () => {
   it.each(providers)('$name keeps required inputs and task execution support', tool => {
@@ -40,6 +39,7 @@ describe('provider tool contracts', () => {
   });
 
   it('includes every supported CLI in detection troubleshooting', async () => {
+    expect(importantReadNowTool.name).toBe('Multi-CLI-Help');
     const message = await importantReadNowTool.execute({});
     for (const cli of ['codex', 'claude', 'agy', 'opencode']) expect(message).toContain(cli);
     expect(message).toContain("MCP server's PATH");
