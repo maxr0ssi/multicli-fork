@@ -24,7 +24,7 @@ jobs:
       - run: npm run refresh-catalog
 
       - name: Save catalog for review
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: model-catalog
           path: src/modelCatalog.generated.json
