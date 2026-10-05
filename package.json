@@ -75,10 +75,10 @@
     "NOTICE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "dotenv": "^17.3.1",
     "preact": "^10.29.8",
-    "zod": "^4.3.6"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
